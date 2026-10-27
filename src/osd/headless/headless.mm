@@ -1453,4 +1453,8 @@ BOOL_PROPERTY(FLIPY, FlipY, flipY);
 
 BOOL_PROPERTY(ARTWORK_CROP, ArtworkCrop, artworkCrop);
 
+#pragma mark - core misc options
+
+BOOL_PROPERTY(CHEAT, Cheat, cheat);
+
 @end
