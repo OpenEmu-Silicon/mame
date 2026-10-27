@@ -778,7 +778,7 @@ if _OPTIONS["NOWERROR"]==nil then
 end
 
 -- if we are optimizing, include optimization options
-if _OPTIONS["OPTIMIZE"] then
+if _OPTIONS["OPTIMIZE"]~=nil and _OPTIONS["OPTIMIZE"]~="0" then
 	buildoptions {
 		"-O".. _OPTIONS["OPTIMIZE"],
 		"-fno-strict-aliasing"

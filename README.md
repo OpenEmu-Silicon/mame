@@ -1,3 +1,26 @@
+# **OpenEmu Notes**
+
+This fork adds a headless OSD (`src/osd/headless`) that builds MAME as a dynamic library for the OpenEmu MAME core.
+OpenEmu-Silicon builds it with `Scripts/build-mame-core.sh`.
+
+## Building .dylib
+
+### arcade (MAME)
+
+```sh
+make NOWERROR=1 REGENIE=1 macosx_arm64_clang OSD="headless" verbose=1 TARGETOS="macosx" CONFIG="release" TARGET=mame SUBTARGET=arcade MACOSX_DEPLOYMENT_TARGET=12.0 -j"$(sysctl -n hw.ncpu)"
+```
+
+### debug build
+
+```sh
+make macosx_arm64_clang OSD="headless" PRECOMPILE=0 OPTIMIZE=0 verbose=1 TARGETOS="macosx" CONFIG="headless-dbg" TARGET=mame SUBTARGET=arcade MACOSX_DEPLOYMENT_TARGET=12.0 -j"$(sysctl -n hw.ncpu)"
+```
+
+`OPTIMIZE=0` ensures -O0
+
+--------
+
 # MAME
 
 ## What is MAME?
