@@ -107,8 +107,10 @@ OE_EXPORTED_CLASS
 #pragma mark - memory / cheats
 
 /// Returns RAM regions for the main CPU's program address space.
-/// Each dictionary has keys: @"address" (NSNumber), @"size" (NSNumber),
-/// @"name" (NSString), @"bytes" (NSData), @"bigEndian" (NSNumber<BOOL>).
+/// Each dictionary has keys: @"address" (NSNumber, CPU address units), @"size" (NSNumber, bytes),
+/// @"name" (NSString), @"bytes" (NSData), @"bigEndian" (NSNumber<BOOL>),
+/// @"addressShift" (NSNumber, MAME's addr_shift: byte offset N is at address + (N << shift),
+/// or + (N >> -shift) when negative; 3 on bit-addressed CPUs such as the TMS34010).
 - (NSArray<NSDictionary *> *)readableMemoryRegions;
 
 /// Enable or disable a per-frame constant-write cheat.

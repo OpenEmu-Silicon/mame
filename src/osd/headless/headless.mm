@@ -673,17 +673,20 @@ static_assert(InputItemID::InputItemID_ABSOLUTE_MAXIMUM == input_item_id::ITEM_I
 
 		offs_t start = entry.m_addrstart & space->addrmask();
 		offs_t end   = entry.m_addrend   & space->addrmask();
-		offs_t size  = end - start + 1;
+		// Map entries are in CPU address units, which are not bytes on every CPU (the TMS34010
+		// addresses bits), so size the copy in bytes and report the scale alongside.
+		offs_t size  = space->address_to_byte_end(end) - space->address_to_byte(start) + 1;
 
 		void *ptr = space->get_write_ptr(start);
 		if (!ptr) continue;
 
 		[regions addObject:@{
-			@"address":    @(start),
-			@"size":       @(size),
-			@"name":       entry.m_share ? @(entry.m_share) : @"",
-			@"bytes":      [NSData dataWithBytes:ptr length:size],
-			@"bigEndian":  @(bigEndian),
+			@"address":      @(start),
+			@"size":         @(size),
+			@"name":         entry.m_share ? @(entry.m_share) : @"",
+			@"bytes":        [NSData dataWithBytes:ptr length:size],
+			@"bigEndian":    @(bigEndian),
+			@"addressShift": @(space->addr_shift()),
 		}];
 	}
 	return regions;
