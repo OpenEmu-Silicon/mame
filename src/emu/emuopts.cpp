@@ -37,9 +37,9 @@ const options_entry emu_options::s_option_entries[] =
 	{ nullptr,                                           nullptr,     core_options::option_type::HEADER,     "CORE CONFIGURATION OPTIONS" },
 	{ OPTION_READCONFIG ";rc",                           "1",         core_options::option_type::BOOLEAN,    "enable loading of configuration files" },
 	{ OPTION_WRITECONFIG ";wc",                          "0",         core_options::option_type::BOOLEAN,    "write configuration to (driver).ini on exit" },
-	{ OPTION_READCFG,                                    "1",         OPTION_BOOLEAN,    "enable loading of configuration (cfg) files" },
-	{ OPTION_WRITECFG,                                   "1",         OPTION_BOOLEAN,    "write configuration to (driver).cfg on exit" },
-	{ OPTION_HEADLESS,                                   "0",         OPTION_BOOLEAN,    "specifies headless mode" },
+	{ OPTION_READCFG,                                    "1",         core_options::option_type::BOOLEAN,    "enable loading of configuration (cfg) files" },
+	{ OPTION_WRITECFG,                                   "1",         core_options::option_type::BOOLEAN,    "write configuration to (driver).cfg on exit" },
+	{ OPTION_HEADLESS,                                   "0",         core_options::option_type::BOOLEAN,    "specifies headless mode" },
 
 	// search path options
 	{ nullptr,                                           nullptr,     core_options::option_type::HEADER,     "CORE SEARCH PATH OPTIONS" },
