@@ -295,7 +295,42 @@ struct headless_joystick_assignments : osd::joystick_assignment_helper
 		}
 
 		add_directional_assignments(result, xaxis, yaxis, ITEM_ID_INVALID, ITEM_ID_INVALID, ITEM_ID_INVALID, ITEM_ID_INVALID);
+		add_twin_stick_defaults(device, result, xaxis, yaxis);
 		return result;
+	}
+
+private:
+	// add_twin_stick_assignments() needs a real second stick, but OpenEmu sends one d-pad
+	// (as the X/Y axes) plus buttons. Restore what MAME 0.250 defaulted to: left stick on
+	// the X/Y axes, right stick on buttons 1-4.
+	static void add_twin_stick_defaults(input_device const &device, input_device::assignment_vector &result, input_item_id xaxis, input_item_id yaxis)
+	{
+		auto const sw = [] (input_item_modifier modifier, input_item_id id)
+		{
+			return input_seq(make_code(ITEM_CLASS_SWITCH, modifier, id));
+		};
+
+		if (ITEM_ID_INVALID != xaxis)
+		{
+			result.emplace_back(IPT_JOYSTICKLEFT_LEFT, SEQ_TYPE_STANDARD, sw(ITEM_MODIFIER_LEFT, xaxis));
+			result.emplace_back(IPT_JOYSTICKLEFT_RIGHT, SEQ_TYPE_STANDARD, sw(ITEM_MODIFIER_RIGHT, xaxis));
+		}
+		if (ITEM_ID_INVALID != yaxis)
+		{
+			result.emplace_back(IPT_JOYSTICKLEFT_UP, SEQ_TYPE_STANDARD, sw(ITEM_MODIFIER_UP, yaxis));
+			result.emplace_back(IPT_JOYSTICKLEFT_DOWN, SEQ_TYPE_STANDARD, sw(ITEM_MODIFIER_DOWN, yaxis));
+		}
+
+		static constexpr std::pair<ioport_type, input_item_id> right_stick[] = {
+				{ IPT_JOYSTICKRIGHT_LEFT, ITEM_ID_BUTTON1 },
+				{ IPT_JOYSTICKRIGHT_UP, ITEM_ID_BUTTON2 },
+				{ IPT_JOYSTICKRIGHT_DOWN, ITEM_ID_BUTTON3 },
+				{ IPT_JOYSTICKRIGHT_RIGHT, ITEM_ID_BUTTON4 } };
+		for (auto const &[type, id] : right_stick)
+		{
+			if (device.item(id))
+				result.emplace_back(type, SEQ_TYPE_STANDARD, sw(ITEM_MODIFIER_NONE, id));
+		}
 	}
 };
 
