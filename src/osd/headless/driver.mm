@@ -24,6 +24,35 @@ OE_STATIC_ASSERT(GameDriverMachineNoDevicePrinter == MACHINE_NODEVICE_PRINTER);
 OE_STATIC_ASSERT(GameDriverMachineNoDeviceLan == MACHINE_NODEVICE_LAN);
 OE_STATIC_ASSERT(GameDriverMachineImperfectTiming == MACHINE_IMPERFECT_TIMING);
 
+std::uint64_t headless_game_driver_flags(game_driver const &driver)
+{
+	using flags = device_t::flags;
+	using feature = device_t::feature;
+
+	auto const emulation = driver.type.emulation_flags();
+	auto const unemulated = driver.type.unemulated_features();
+	auto const imperfect = driver.type.imperfect_features();
+
+	std::uint64_t result = std::uint64_t(driver.flags);
+	if (emulation & flags::NOT_WORKING)        result |= MACHINE_NOT_WORKING;
+	if (!(emulation & flags::SAVE_UNSUPPORTED)) result |= MACHINE_SUPPORTS_SAVE;
+
+	if (unemulated & feature::PALETTE)         result |= MACHINE_WRONG_COLORS;
+	if (unemulated & feature::SOUND)           result |= MACHINE_NO_SOUND;
+	if (unemulated & feature::MICROPHONE)      result |= MACHINE_NODEVICE_MICROPHONE;
+	if (unemulated & feature::PRINTER)         result |= MACHINE_NODEVICE_PRINTER;
+	if (unemulated & feature::LAN)             result |= MACHINE_NODEVICE_LAN;
+
+	if (imperfect & feature::PROTECTION)       result |= MACHINE_UNEMULATED_PROTECTION;
+	if (imperfect & feature::PALETTE)          result |= MACHINE_IMPERFECT_COLORS;
+	if (imperfect & feature::GRAPHICS)         result |= MACHINE_IMPERFECT_GRAPHICS;
+	if (imperfect & feature::SOUND)            result |= MACHINE_IMPERFECT_SOUND;
+	if (imperfect & feature::CONTROLS)         result |= MACHINE_IMPERFECT_CONTROLS;
+	if (imperfect & feature::TIMING)           result |= MACHINE_IMPERFECT_TIMING;
+
+	return result;
+}
+
 @implementation GameDriver {
 	game_driver const *_driver;
 	NSString *_name;
@@ -70,7 +99,7 @@ OE_STATIC_ASSERT(GameDriverMachineImperfectTiming == MACHINE_IMPERFECT_TIMING);
 
 - (GameDriverOptions)flags
 {
-	return static_cast<GameDriverOptions>(_driver->flags);
+	return static_cast<GameDriverOptions>(headless_game_driver_flags(*_driver));
 }
 
 - (void)dealloc

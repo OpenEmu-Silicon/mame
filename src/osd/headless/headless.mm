@@ -596,7 +596,7 @@ static_assert(InputItemID::InputItemID_ABSOLUTE_MAXIMUM == input_item_id::ITEM_I
 		return NO;
 	}
 
-	_supportsSave = static_cast<BOOL>((_machine->system().flags & MACHINE_SUPPORTS_SAVE) != 0);
+	_supportsSave = static_cast<BOOL>((headless_game_driver_flags(_machine->system()) & MACHINE_SUPPORTS_SAVE) != 0);
 
 	return static_cast<BOOL>(_machine->phase() == machine_phase::RUNNING);
 }
