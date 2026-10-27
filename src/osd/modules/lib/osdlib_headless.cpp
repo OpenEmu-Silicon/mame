@@ -16,6 +16,7 @@
 #include "osdlib.h"
 
 #include <dlfcn.h>
+#include <sys/sysctl.h>
 
 //============================================================
 //  osd_getenv
@@ -84,6 +85,22 @@ void osd_break_into_debugger(const char *message)
 }
 
 //============================================================
+//  osd_get_cache_line_size
+//============================================================
+
+std::pair<std::error_condition, unsigned> osd_get_cache_line_size() noexcept
+{
+	size_t result = 0;
+	size_t resultsize = sizeof(result);
+	int const err = sysctlbyname("hw.cachelinesize", &result, &resultsize, 0, 0);
+	if (!err)
+		return std::make_pair(std::error_condition(), unsigned(result));
+	else
+		return std::make_pair(std::error_condition(err, std::generic_category()), 0U);
+}
+
+
+//============================================================
 //  osd_get_clipboard_text
 //============================================================
 
@@ -105,7 +122,7 @@ std::error_condition osd_set_clipboard_text(std::string_view text) noexcept
 //  osd_getpid
 //============================================================
 
-int osd_getpid()
+int osd_getpid() noexcept
 {
 	return getpid();
 }
@@ -177,7 +194,7 @@ private:
 } // anonymous namespace
 
 
-bool invalidate_instruction_cache(void const *start, std::size_t size)
+bool invalidate_instruction_cache(void const *start, std::size_t size) noexcept
 {
 	char const *const begin(reinterpret_cast<char const *>(start));
 	char const *const end(begin + size);
@@ -186,7 +203,7 @@ bool invalidate_instruction_cache(void const *start, std::size_t size)
 }
 
 
-void *virtual_memory_allocation::do_alloc(std::initializer_list<std::size_t> blocks, unsigned intent, std::size_t &size, std::size_t &page_size)
+void *virtual_memory_allocation::do_alloc(std::initializer_list<std::size_t> blocks, unsigned intent, std::size_t &size, std::size_t &page_size) noexcept
 {
 	long const p(sysconf(_SC_PAGE_SIZE));
 	if (0 >= p)
@@ -205,12 +222,12 @@ void *virtual_memory_allocation::do_alloc(std::initializer_list<std::size_t> blo
 	return result;
 }
 
-void virtual_memory_allocation::do_free(void *start, std::size_t size)
+void virtual_memory_allocation::do_free(void *start, std::size_t size) noexcept
 {
 	munmap(start, size);
 }
 
-bool virtual_memory_allocation::do_set_access(void *start, std::size_t size, unsigned access)
+bool virtual_memory_allocation::do_set_access(void *start, std::size_t size, unsigned access) noexcept
 {
 	int prot((NONE == access) ? PROT_NONE : 0);
 	if (access & READ)

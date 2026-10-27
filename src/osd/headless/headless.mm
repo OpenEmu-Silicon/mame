@@ -15,6 +15,7 @@
 #include "rendlay.h"
 #include "ui/uimain.h"
 #include "uiinput.h"
+#include "input.h"
 #include <inputdev.h>
 #include <os/log.h>
 
@@ -94,7 +95,10 @@ public:
 	void init(running_machine &machine) override;
 	void exit();
 	void update(bool skip_redraw) override;
-	void input_update() override;
+	void input_update(bool relative_reset) override;
+
+	void check_osd_inputs() override
+	{};
 
 	// debugger overridables
 	void init_debugger() override
@@ -104,13 +108,40 @@ public:
 	{};
 
 	// audio overridables
-	void update_audio_stream(const int16_t *buffer, int samples_this_frame) override;
-
-	void set_mastervolume(int attenuation) override
-	{};
-
 	bool no_sound() override
 	{ return false; };
+
+	bool sound_external_per_channel_volume() override
+	{ return false; };
+
+	bool sound_split_streams_per_source() override
+	{ return false; };
+
+	uint32_t sound_get_generation() override
+	{ return 1; };
+
+	osd::audio_info sound_get_information() override;
+	uint32_t sound_stream_sink_open(uint32_t node, std::string name, uint32_t rate) override;
+
+	uint32_t sound_stream_source_open(uint32_t node, std::string name, uint32_t rate) override
+	{ return 0; };
+
+	void sound_stream_close(uint32_t id) override
+	{};
+
+	void sound_stream_sink_update(uint32_t id, const int16_t *buffer, int samples_this_frame) override;
+
+	void sound_stream_source_update(uint32_t id, int16_t *buffer, int samples_this_frame) override
+	{};
+
+	void sound_stream_set_volumes(uint32_t id, const std::vector<float> &db) override
+	{};
+
+	void sound_begin_update() override
+	{};
+
+	void sound_end_update() override
+	{};
 
 	// input overridables
 	void customize_input_type_list(std::vector<input_type_entry> &typelist) override;
@@ -140,11 +171,24 @@ public:
 	{ return false; }
 
 	// midi interface
-	std::unique_ptr<osd_midi_device> create_midi_device() override
+	std::unique_ptr<osd::midi_input_port> create_midi_input(std::string_view name) override
 	{ return nullptr; };
 
+	std::unique_ptr<osd::midi_output_port> create_midi_output(std::string_view name) override
+	{ return nullptr; };
+
+	std::vector<osd::midi_port_info> list_midi_ports() override
+	{ return {}; };
+
+	// network interface
+	std::unique_ptr<osd::network_device> open_network_device(int id, osd::network_handler &handler) override
+	{ return nullptr; };
+
+	std::vector<osd::network_device_info> list_network_devices() override
+	{ return {}; };
+
 	// osd_output interface ...
-	void output_callback(osd_output_channel channel, util::format_argument_pack<std::ostream> const &args) override;
+	void output_callback(osd_output_channel channel, util::format_argument_pack<char> const &args) override;
 
 	bool verbose() const
 	{ return m_print_verbose; }
@@ -673,7 +717,7 @@ static int32_t block_getter(void *device_internal, void *item_internal)
 - (InputItemID)addItemNamed:(NSString *)name id:(InputItemID)iid withBlock:(InputCallback)block
 {
 	// capture the assigned InputItemID
-	iid = static_cast<InputItemID>(_device->add_item(name.UTF8String, static_cast<input_item_id>(iid),
+	iid = static_cast<InputItemID>(_device->add_item(name.UTF8String, std::string_view(), static_cast<input_item_id>(iid),
 	                                           reinterpret_cast<input_device_item::item_get_state_func>(block_getter), (__bridge void *)block));
 	// maintain a reference to the block, so it isn't released prematurely
 	_callbacks[@(iid)] = block;
@@ -682,7 +726,7 @@ static int32_t block_getter(void *device_internal, void *item_internal)
 
 - (InputItemID)addItemNamed:(NSString *)name id:(InputItemID)iid getter:(ItemGetStateFunc)getter context:(void *)context
 {
-	return static_cast<InputItemID>(_device->add_item(name.UTF8String, static_cast<input_item_id>(iid),
+	return static_cast<InputItemID>(_device->add_item(name.UTF8String, std::string_view(), static_cast<input_item_id>(iid),
 	                                                  reinterpret_cast<input_device_item::item_get_state_func>(getter), context));
 }
 
@@ -883,7 +927,7 @@ void headless_osd_interface::update(bool skip_redraw)
 	}
 }
 
-void headless_osd_interface::input_update()
+void headless_osd_interface::input_update(bool relative_reset)
 {
 	// TODO(sgc): Potentially provide delegate API to update input?
 }
@@ -898,9 +942,42 @@ void headless_osd_interface::exit()
 
 #pragma mark - audio overridables
 
-void headless_osd_interface::update_audio_stream(const int16_t *buffer, int samples_this_frame)
+// The frontend (OpenEmu) plays a single interleaved stereo stream at a fixed rate,
+// so expose exactly one output node and let MAME's mixer route every speaker to it.
+static constexpr uint32_t HEADLESS_AUDIO_NODE = 1;
+static constexpr uint32_t HEADLESS_AUDIO_STREAM = 1;
+static constexpr uint32_t HEADLESS_AUDIO_RATE = 48000;
+
+osd::audio_info headless_osd_interface::sound_get_information()
 {
-	[m_delegate updateAudioBuffer:buffer samples:samples_this_frame];
+	osd::audio_info result;
+	result.m_generation = 1;
+	result.m_default_sink = HEADLESS_AUDIO_NODE;
+	result.m_default_source = 0;
+
+	osd::audio_info::node_info node;
+	node.m_name = "OpenEmu";
+	node.m_display_name = "OpenEmu";
+	node.m_id = HEADLESS_AUDIO_NODE;
+	node.m_rate = osd::audio_rate_range{ HEADLESS_AUDIO_RATE, HEADLESS_AUDIO_RATE, HEADLESS_AUDIO_RATE };
+	node.m_port_names = { "FL", "FR" };
+	node.m_port_positions = { osd::channel_position::FL(), osd::channel_position::FR() };
+	node.m_sinks = 2;
+	node.m_sources = 0;
+	result.m_nodes.push_back(std::move(node));
+
+	return result;
+}
+
+uint32_t headless_osd_interface::sound_stream_sink_open(uint32_t node, std::string name, uint32_t rate)
+{
+	return node == HEADLESS_AUDIO_NODE ? HEADLESS_AUDIO_STREAM : 0;
+}
+
+void headless_osd_interface::sound_stream_sink_update(uint32_t id, const int16_t *buffer, int samples_this_frame)
+{
+	if (id == HEADLESS_AUDIO_STREAM)
+		[m_delegate updateAudioBuffer:buffer samples:samples_this_frame];
 }
 
 #pragma mark - input overridables
@@ -958,7 +1035,7 @@ bool headless_osd_interface::get_font_families(std::string const &font_path,
 #pragma mark - output
 
 void headless_osd_interface::output_callback(osd_output_channel channel,
-                                             util::format_argument_pack<std::ostream> const &args)
+                                             util::format_argument_pack<char> const &args)
 {
 	static OSDLogLevel levels[OSD_OUTPUT_CHANNEL_COUNT] = {
 			[OSD_OUTPUT_CHANNEL_ERROR] = OSDLogLevelError,

@@ -61,8 +61,6 @@ project ("osd_" .. _OPTIONS["osd"])
 	}
 
 	files {
-		MAME_DIR .. "src/osd/osdnet.cpp",
-		MAME_DIR .. "src/osd/osdnet.h",
 		MAME_DIR .. "src/osd/headless/headless.mm",
 		MAME_DIR .. "src/osd/headless/driver.mm",
 		MAME_DIR .. "src/osd/osdepend.h",

@@ -3,11 +3,26 @@
 #import <emu.h>
 #import "../../frontend/mame/infoxml.h"
 
-OE_STATIC_ASSERT(GameDriverMachineTypeArcade == MACHINE_TYPE_ARCADE);
+OE_STATIC_ASSERT(GameDriverMachineNoCocktail == MACHINE_NO_COCKTAIL);
+OE_STATIC_ASSERT(GameDriverMachineIsBiosRoot == MACHINE_IS_BIOS_ROOT);
+OE_STATIC_ASSERT(GameDriverMachineRequiresArtwork == MACHINE_REQUIRES_ARTWORK);
+OE_STATIC_ASSERT(GameDriverMachineUnofficial == MACHINE_UNOFFICIAL);
+OE_STATIC_ASSERT(GameDriverMachineNoSoundHw == MACHINE_NO_SOUND_HW);
+OE_STATIC_ASSERT(GameDriverMachineMechanical == MACHINE_MECHANICAL);
+OE_STATIC_ASSERT(GameDriverMachineIsIncomplete == MACHINE_IS_INCOMPLETE);
+OE_STATIC_ASSERT(GameDriverMachineNotWorking == MACHINE_NOT_WORKING);
+OE_STATIC_ASSERT(GameDriverMachineSupportsSave == MACHINE_SUPPORTS_SAVE);
 OE_STATIC_ASSERT(GameDriverMachineUnemulatedProtection == MACHINE_UNEMULATED_PROTECTION);
+OE_STATIC_ASSERT(GameDriverMachineWrongColors == MACHINE_WRONG_COLORS);
+OE_STATIC_ASSERT(GameDriverMachineImperfectColors == MACHINE_IMPERFECT_COLORS);
+OE_STATIC_ASSERT(GameDriverMachineImperfectGraphics == MACHINE_IMPERFECT_GRAPHICS);
+OE_STATIC_ASSERT(GameDriverMachineNoSound == MACHINE_NO_SOUND);
+OE_STATIC_ASSERT(GameDriverMachineImperfectSound == MACHINE_IMPERFECT_SOUND);
+OE_STATIC_ASSERT(GameDriverMachineImperfectControls == MACHINE_IMPERFECT_CONTROLS);
+OE_STATIC_ASSERT(GameDriverMachineNoDeviceMicrophone == MACHINE_NODEVICE_MICROPHONE);
+OE_STATIC_ASSERT(GameDriverMachineNoDevicePrinter == MACHINE_NODEVICE_PRINTER);
+OE_STATIC_ASSERT(GameDriverMachineNoDeviceLan == MACHINE_NODEVICE_LAN);
 OE_STATIC_ASSERT(GameDriverMachineImperfectTiming == MACHINE_IMPERFECT_TIMING);
-OE_STATIC_ASSERT(GameDriverMachineIsSkeleton == MACHINE_IS_SKELETON);
-OE_STATIC_ASSERT(GameDriverMachineIsSkeletonMechanical == MACHINE_IS_SKELETON_MECHANICAL);
 
 @implementation GameDriver {
 	game_driver const *_driver;
