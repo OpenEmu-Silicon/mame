@@ -58,6 +58,8 @@ function osdmodulesbuild()
 		MAME_DIR .. "src/osd/interface/inputseq.h",
 		MAME_DIR .. "src/osd/interface/nethandler.cpp",
 		MAME_DIR .. "src/osd/interface/nethandler.h",
+		MAME_DIR .. "src/osd/modules/input/assignmenthelper.cpp",
+		MAME_DIR .. "src/osd/modules/input/assignmenthelper.h",
 		--[[
 		MAME_DIR .. "src/osd/watchdog.cpp",
 		MAME_DIR .. "src/osd/watchdog.h",

@@ -25,6 +25,7 @@
 #include "options+private.h"
 #include "modules/lib/osdlib.h"
 #include "modules/lib/osdobj_common.h"
+#include "modules/input/assignmenthelper.h"
 #import "../../../frontend/mame/mame.h"
 
 // Renderer headers
@@ -235,6 +236,70 @@ protected:
 @interface InputClass ()
 - (instancetype)initWithClass:(input_class *)clas;
 @end
+
+#pragma mark - joystick default assignments
+
+namespace {
+
+// MAME no longer maps joystick buttons and directions to game inputs by default
+// (since 0.25x); OSD input modules supply per-device default assignments instead.
+// Mirror what the SDL generic joystick module does for the items OpenEmu adds.
+struct headless_joystick_assignments : osd::joystick_assignment_helper
+{
+	static input_device::assignment_vector build(input_device const &device)
+	{
+		input_device::assignment_vector result;
+		input_item_id xaxis = ITEM_ID_INVALID;
+		input_item_id yaxis = ITEM_ID_INVALID;
+
+		for (int i = ITEM_ID_FIRST_VALID; i <= device.maxitem(); i++)
+		{
+			auto const id = static_cast<input_item_id>(i);
+			if (!device.item(id))
+				continue;
+
+			if (id == ITEM_ID_XAXIS)
+			{
+				xaxis = id;
+			}
+			else if (id == ITEM_ID_YAXIS)
+			{
+				yaxis = id;
+			}
+			else if ((id >= ITEM_ID_BUTTON1) && (id < ITEM_ID_BUTTON1 + 16))
+			{
+				int const button = id - ITEM_ID_BUTTON1;
+				input_seq const seq(make_code(ITEM_CLASS_SWITCH, ITEM_MODIFIER_NONE, id));
+				result.emplace_back(ioport_type(IPT_BUTTON1 + button), SEQ_TYPE_STANDARD, seq);
+
+				// first few buttons also drive pedals and the MAME menus
+				switch (button)
+				{
+				case 0:
+					result.emplace_back(IPT_PEDAL, SEQ_TYPE_INCREMENT, seq);
+					result.emplace_back(IPT_UI_SELECT, SEQ_TYPE_STANDARD, seq);
+					break;
+				case 1:
+					result.emplace_back(IPT_PEDAL2, SEQ_TYPE_INCREMENT, seq);
+					result.emplace_back(IPT_UI_BACK, SEQ_TYPE_STANDARD, seq);
+					break;
+				case 2:
+					result.emplace_back(IPT_PEDAL3, SEQ_TYPE_INCREMENT, seq);
+					result.emplace_back(IPT_UI_CLEAR, SEQ_TYPE_STANDARD, seq);
+					break;
+				case 3:
+					result.emplace_back(IPT_UI_HELP, SEQ_TYPE_STANDARD, seq);
+					break;
+				}
+			}
+		}
+
+		add_directional_assignments(result, xaxis, yaxis, ITEM_ID_INVALID, ITEM_ID_INVALID, ITEM_ID_INVALID, ITEM_ID_INVALID);
+		return result;
+	}
+};
+
+} // anonymous namespace
 
 #pragma mark - OSD Objective C Interface
 
@@ -721,13 +786,22 @@ static int32_t block_getter(void *device_internal, void *item_internal)
 	                                           reinterpret_cast<input_device_item::item_get_state_func>(block_getter), (__bridge void *)block));
 	// maintain a reference to the block, so it isn't released prematurely
 	_callbacks[@(iid)] = block;
+	[self _updateDefaultAssignments];
 	return iid;
 }
 
 - (InputItemID)addItemNamed:(NSString *)name id:(InputItemID)iid getter:(ItemGetStateFunc)getter context:(void *)context
 {
-	return static_cast<InputItemID>(_device->add_item(name.UTF8String, std::string_view(), static_cast<input_item_id>(iid),
-	                                                  reinterpret_cast<input_device_item::item_get_state_func>(getter), context));
+	iid = static_cast<InputItemID>(_device->add_item(name.UTF8String, std::string_view(), static_cast<input_item_id>(iid),
+	                                                 reinterpret_cast<input_device_item::item_get_state_func>(getter), context));
+	[self _updateDefaultAssignments];
+	return iid;
+}
+
+- (void)_updateDefaultAssignments
+{
+	if (_device->device_class() == DEVICE_CLASS_JOYSTICK)
+		_device->set_default_assignments(headless_joystick_assignments::build(*_device));
 }
 
 @end
