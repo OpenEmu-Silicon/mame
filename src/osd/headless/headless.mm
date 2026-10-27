@@ -6,6 +6,7 @@
 
 // MAME headers
 #include "emu.h"
+#include "fileio.h"
 #include "../../frontend/mame/audit.h"
 #include "osdepend.h"
 #include "emuopts.h"
@@ -498,30 +499,55 @@ static_assert(InputItemID::InputItemID_ABSOLUTE_MAXIMUM == input_item_id::ITEM_I
 
 #pragma mark - save / load
 
+// Reads or writes a state file right away and reports what happened. MAME's own
+// immediate_save/immediate_load only report through an on-screen popup (which shows
+// OpenEmu's long temporary path) and quietly postpone the operation when the CPU has
+// short-lived timers pending, so OpenEmu could not tell a failed save from a good one.
+- (BOOL)_transferStateAtPath:(NSString *)fileName loading:(BOOL)loading error:(NSError **)error
+{
+	NSString *verb = loading ? @"loaded" : @"saved";
+	auto fail = [&](MAMEError code, NSString *reason) {
+		if (error)
+		{
+			*error = [NSError errorWithDomain:MAMEErrorDomain code:code userInfo:@{
+				NSLocalizedDescriptionKey: [NSString stringWithFormat:@"The save state could not be %@.", verb],
+				NSLocalizedRecoverySuggestionErrorKey: reason,
+			}];
+		}
+		return NO;
+	};
+
+	if (!_machine || !_supportsSave)
+		return fail(MAMEErrorSaveStateFailed, @"This game does not support save states.");
+
+	// the same rule MAME applies before any save or load
+	if (!_machine->scheduler().can_save())
+		return fail(MAMEErrorSaveStateBusy, @"The game was busy. Try again in a moment.");
+
+	u32 const openflags = loading ? OPEN_FLAG_READ : (OPEN_FLAG_WRITE | OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_PATHS);
+	emu_file file("", openflags);
+	if (file.open(fileName.UTF8String))
+		return fail(MAMEErrorSaveStateFailed, @"The save state file could not be opened.");
+
+	save_error const result = loading ? _machine->save().read_file(file) : _machine->save().write_file(file);
+	if (result == STATERR_NONE)
+		return YES;
+
+	if (!loading)
+		file.remove_on_close();
+	if (result == STATERR_INVALID_HEADER)
+		return fail(MAMEErrorSaveStateIncompatible, @"It was made by a different version of MAME or for a different game.");
+	return fail(MAMEErrorSaveStateFailed, loading ? @"The file could not be read." : @"The file could not be written. Check there is enough disk space.");
+}
+
 - (BOOL)loadStateFromFileAtPath:(NSString *)fileName error:(NSError **)error
 {
-	if (_supportsSave)
-	{
-		std::string name(fileName.UTF8String);
-		_machine->immediate_load(name.c_str());
-		// OpenEmu reports save/load itself; drop MAME's popup with the temporary file path
-		_machine->popmessage();
-		return YES;
-	}
-	return NO;
+	return [self _transferStateAtPath:fileName loading:YES error:error];
 }
 
 - (BOOL)saveStateFromFileAtPath:(NSString *)fileName error:(NSError **)error
 {
-	if (_supportsSave)
-	{
-		std::string name(fileName.UTF8String);
-		_machine->immediate_save(name.c_str());
-		// OpenEmu reports save/load itself; drop MAME's popup with the temporary file path
-		_machine->popmessage();
-		return YES;
-	}
-	return NO;
+	return [self _transferStateAtPath:fileName loading:NO error:error];
 }
 
 

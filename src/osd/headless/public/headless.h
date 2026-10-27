@@ -16,6 +16,9 @@ typedef NS_ERROR_ENUM(MAMEErrorDomain, MAMEError)
 	MAMEErrorInvalidDriver = -3,
 	MAMEErrorMissingFiles = -4,
 	MAMEErrorFatal = -5,
+	MAMEErrorSaveStateBusy = -6,
+	MAMEErrorSaveStateIncompatible = -7,
+	MAMEErrorSaveStateFailed = -8,
 };
 
 @class OSD, AuditResult, AuditRecord, Device;
