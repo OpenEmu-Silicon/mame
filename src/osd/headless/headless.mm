@@ -492,6 +492,7 @@ static_assert(InputItemID::InputItemID_ABSOLUTE_MAXIMUM == input_item_id::ITEM_I
 - (void)unload
 {
 	_osd->set_buffer(nullptr, osd_dim());
+	@synchronized (self) { [_activeCheats removeAllObjects]; }
 	[self _freeMachine];
 }
 
@@ -573,7 +574,6 @@ static_assert(InputItemID::InputItemID_ABSOLUTE_MAXIMUM == input_item_id::ITEM_I
 	_mouse = nil;
 	_keyboard = nil;
 	_supportsSave = NO;
-	@synchronized (self) { [_activeCheats removeAllObjects]; }
 
 	_manager->set_machine(nullptr);
 
@@ -747,6 +747,10 @@ static_assert(InputItemID::InputItemID_ABSOLUTE_MAXIMUM == input_item_id::ITEM_I
 		};
 	}
 
+	// a failed hard reset leaves no machine; do nothing rather than crash
+	if (!_machine)
+		return NO;
+
 	[self _applyCheats];
 	_machine->headless_run();
 
@@ -755,13 +759,17 @@ static_assert(InputItemID::InputItemID_ABSOLUTE_MAXIMUM == input_item_id::ITEM_I
 
 - (void)scheduleSoftReset
 {
-	_machine->schedule_soft_reset();
+	if (_machine)
+		_machine->schedule_soft_reset();
 }
 
 - (void)scheduleHardReset
 {
-	[self unload];
-	[self _initializeGame:nil];
+	// Keep the host's video buffer and the active cheats: the host does not hand the buffer
+	// over again after a reset, and its cheat list still shows the cheats as enabled.
+	NSError *error = nil;
+	if (![self _initializeGame:&error])
+		osd_printf_error("hard reset failed: %s\n", error.localizedDescription.UTF8String);
 }
 
 + (OSD *)shared
