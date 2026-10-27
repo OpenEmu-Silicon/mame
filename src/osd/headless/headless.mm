@@ -468,6 +468,8 @@ static_assert(InputItemID::InputItemID_ABSOLUTE_MAXIMUM == input_item_id::ITEM_I
 	{
 		std::string name(fileName.UTF8String);
 		_machine->immediate_load(name.c_str());
+		// OpenEmu reports save/load itself; drop MAME's popup with the temporary file path
+		_machine->popmessage();
 		return YES;
 	}
 	return NO;
@@ -479,6 +481,8 @@ static_assert(InputItemID::InputItemID_ABSOLUTE_MAXIMUM == input_item_id::ITEM_I
 	{
 		std::string name(fileName.UTF8String);
 		_machine->immediate_save(name.c_str());
+		// OpenEmu reports save/load itself; drop MAME's popup with the temporary file path
+		_machine->popmessage();
 		return YES;
 	}
 	return NO;
